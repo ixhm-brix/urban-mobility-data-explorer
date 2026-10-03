@@ -1,0 +1,7 @@
+# Python 3.10+
+pandas>=2.1
+pyarrow>=14
+pyshp>=2.3        # reads the taxi_zones shapefile
+pyproj>=3.6       # NY State Plane (ft) -> WGS84 lon/lat
+flask>=3.0
+python-dotenv>=1.0

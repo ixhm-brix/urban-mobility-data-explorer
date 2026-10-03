@@ -1,0 +1,26 @@
+# --- data: too large for git; rebuild with the pipeline ---------------------
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# --- database files ---------------------------------------------------------
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.building
+database/dump/*.sql.gz
+
+# --- python -----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# --- editors / OS -----------------------------------------------------------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

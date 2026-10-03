@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #f5f5f7; font-family: Inter, -apple-system, system-ui, sans-serif; }
+  svg { display: block; }
+  .t  { font-size: 15px; font-weight: 600; fill: #1d1d1f; letter-spacing: -0.01em; }
+  .s  { font-size: 12px; fill: #6e6e73; }
+  .k  { font-size: 11px; font-weight: 600; fill: #86868b; letter-spacing: .06em; text-transform: uppercase; }
+  .h  { font-size: 26px; font-weight: 700; fill: #1d1d1f; letter-spacing: -0.03em; }
+  .lane { fill: #ffffff; stroke: rgba(0,0,0,.06); }
+  .box  { fill: #f5f5f7; stroke: rgba(0,0,0,.10); }
+  .acc  { fill: #e8f1fc; stroke: #2a78d6; }
+  .edge { stroke: #86868b; stroke-width: 1.5; fill: none; marker-end: url(#a); }
+  .el   { font-size: 11px; fill: #6e6e73; }
+</style>
+</head>
+<body>
+<svg width="1600" height="900" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#86868b"/>
+    </marker>
+  </defs>
+
+  <text x="48" y="64" class="h">Urban Mobility Data Explorer — architecture</text>
+  <text x="48" y="90" class="s" style="font-size:14px">Raw TLC files → Python pipeline → SQLite (star schema + roll-ups) → Flask JSON API → HTML/CSS/JS dashboard</text>
+
+  <!-- lanes -->
+  <rect class="lane" x="40"   y="120" width="290" height="740" rx="22"/>
+  <rect class="lane" x="350"  y="120" width="330" height="740" rx="22"/>
+  <rect class="lane" x="700"  y="120" width="340" height="740" rx="22"/>
+  <rect class="lane" x="1060" y="120" width="250" height="740" rx="22"/>
+  <rect class="lane" x="1330" y="120" width="230" height="740" rx="22"/>
+  <text x="64"   y="152" class="k">1 · Raw data</text>
+  <text x="374"  y="152" class="k">2 · Pipeline (pipeline/)</text>
+  <text x="724"  y="152" class="k">3 · Database (database/)</text>
+  <text x="1084" y="152" class="k">4 · API (backend/)</text>
+  <text x="1354" y="152" class="k">5 · Dashboard</text>
+
+  <!-- raw -->
+  <rect class="box" x="64" y="176" width="242" height="88" rx="14"/>
+  <text x="80" y="204" class="t">yellow_tripdata_2019-01</text>
+  <text x="80" y="226" class="s">.parquet · 7,696,617 trips</text>
+  <text x="80" y="246" class="s">fact table</text>
+  <rect class="box" x="64" y="284" width="242" height="88" rx="14"/>
+  <text x="80" y="312" class="t">taxi_zone_lookup.csv</text>
+  <text x="80" y="334" class="s">265 zones · borough · service zone</text>
+  <text x="80" y="354" class="s">dimension table</text>
+  <rect class="box" x="64" y="392" width="242" height="88" rx="14"/>
+  <text x="80" y="420" class="t">taxi_zones (shapefile)</text>
+  <text x="80" y="442" class="s">263 polygons · NY State Plane (ft)</text>
+  <text x="80" y="462" class="s">spatial metadata</text>
+
+  <!-- pipeline -->
+  <rect class="box" x="374" y="176" width="282" height="104" rx="14"/>
+  <text x="390" y="204" class="t">load.py</text>
+  <text x="390" y="226" class="s">read parquet/CSV + lookup</text>
+  <text x="390" y="246" class="s">reproject shapes → WGS84 GeoJSON</text>
+  <text x="390" y="266" class="s">fix duplicate zone IDs · centroids, area</text>
+  <rect class="box" x="374" y="298" width="282" height="104" rx="14"/>
+  <text x="390" y="326" class="t">clean.py</text>
+  <text x="390" y="348" class="s">16 exclusion rules · duplicates</text>
+  <text x="390" y="368" class="s">repairs (nulls, sentinel codes)</text>
+  <text x="390" y="388" class="s">5 "suspicious but kept" flags</text>
+  <rect class="box" x="374" y="420" width="282" height="104" rx="14"/>
+  <text x="390" y="448" class="t">features.py</text>
+  <text x="390" y="470" class="s">speed · $/mile · tip % · detour index</text>
+  <text x="390" y="490" class="s">time keys · airport · cross-borough</text>
+  <text x="390" y="510" class="s">distance & fare bands</text>
+  <rect class="acc" x="374" y="542" width="282" height="84" rx="14"/>
+  <text x="390" y="570" class="t">run_pipeline.py</text>
+  <text x="390" y="592" class="s">normalise names, types, timestamps</text>
+  <text x="390" y="612" class="s">→ data/processed/*.parquet, .geojson</text>
+  <rect class="box" x="374" y="644" width="282" height="96" rx="14"/>
+  <text x="390" y="672" class="t">logs/</text>
+  <text x="390" y="694" class="s">excluded_records.csv (113,386)</text>
+  <text x="390" y="714" class="s">suspicious_records.csv</text>
+  <text x="390" y="732" class="s">cleaning_summary.json</text>
+
+  <!-- database -->
+  <rect class="box" x="724" y="176" width="292" height="150" rx="14"/>
+  <text x="740" y="204" class="t">Dimensions</text>
+  <text x="740" y="226" class="s">boroughs · service_zones · zones</text>
+  <text x="740" y="246" class="s">zone_geometry · vendors · rate_codes</text>
+  <text x="740" y="266" class="s">payment_types · time_bands</text>
+  <text x="740" y="286" class="s">distance_bands · fare_bands</text>
+  <text x="740" y="310" class="s">PK/FK + CHECK constraints</text>
+  <rect class="acc" x="724" y="344" width="292" height="118" rx="14"/>
+  <text x="740" y="372" class="t">trips (fact) · 7,583,231 rows</text>
+  <text x="740" y="394" class="s">raw measures + engineered features</text>
+  <text x="740" y="414" class="s">indexes: pickup time, zone+time, route,</text>
+  <text x="740" y="434" class="s">distance, fare, duration, speed</text>
+  <text x="740" y="452" class="s">→ trip explorer & detail</text>
+  <rect class="box" x="724" y="480" width="292" height="130" rx="14"/>
+  <text x="740" y="508" class="t">Roll-ups (built by load_data.py)</text>
+  <text x="740" y="530" class="s">agg_zone_hour · 764,900 rows</text>
+  <text x="740" y="550" class="s">date × hour × zone × payment × bands</text>
+  <text x="740" y="570" class="s">agg_od · 358,690 rows</text>
+  <text x="740" y="590" class="s">origin × destination × hour × weekend</text>
+  <rect class="box" x="724" y="628" width="292" height="112" rx="14"/>
+  <text x="740" y="656" class="t">data_quality_rules / _run</text>
+  <text x="740" y="678" class="s">the cleaning log, queryable</text>
+  <text x="740" y="706" class="t" style="font-size:13px">SQLite · urban_mobility.db</text>
+  <text x="740" y="726" class="s">2.4 GB · dump/ (sample + full .sql.gz)</text>
+
+  <!-- api -->
+  <rect class="box" x="1084" y="176" width="202" height="122" rx="14"/>
+  <text x="1100" y="204" class="t">app.py · routes/</text>
+  <text x="1100" y="226" class="s">meta · analytics · zones</text>
+  <text x="1100" y="246" class="s">flows · trips · quality</text>
+  <text x="1100" y="266" class="s">insights</text>
+  <text x="1100" y="286" class="s">gzip · error envelope</text>
+  <rect class="box" x="1084" y="316" width="202" height="122" rx="14"/>
+  <text x="1100" y="344" class="t">queries/</text>
+  <text x="1100" y="366" class="s">*.sql files</text>
+  <text x="1100" y="386" class="s">filters.py → validated,</text>
+  <text x="1100" y="406" class="s">parameterised WHERE</text>
+  <text x="1100" y="426" class="s">(agg / trips / od)</text>
+  <rect class="box" x="1084" y="456" width="202" height="122" rx="14"/>
+  <text x="1100" y="484" class="t">db.py</text>
+  <text x="1100" y="506" class="s">read-only conn / thread</text>
+  <text x="1100" y="526" class="s">LRU result cache</text>
+  <text x="1100" y="546" class="s">8 s query watchdog</text>
+  <rect class="acc" x="1084" y="596" width="202" height="144" rx="14"/>
+  <text x="1100" y="624" class="t">algorithms/</text>
+  <text x="1100" y="646" class="s">top_k_heap.py</text>
+  <text x="1100" y="666" class="s">hand-written min-heap</text>
+  <text x="1100" y="686" class="s">+ merge sort, O(n log k)</text>
+  <text x="1100" y="710" class="s">insights.py</text>
+  <text x="1100" y="728" class="s">3 insight queries</text>
+
+  <!-- frontend -->
+  <rect class="box" x="1354" y="176" width="182" height="122" rx="14"/>
+  <text x="1370" y="204" class="t">index.html</text>
+  <text x="1370" y="226" class="s">css/styles.css</text>
+  <text x="1370" y="246" class="s">one page: filters,</text>
+  <text x="1370" y="266" class="s">summary, charts,</text>
+  <text x="1370" y="286" class="s">tables, cleaning log</text>
+  <rect class="box" x="1354" y="316" width="182" height="102" rx="14"/>
+  <text x="1370" y="344" class="t">js/api.js</text>
+  <text x="1370" y="366" class="s">all fetch calls</text>
+  <text x="1370" y="386" class="s">mock fallback when</text>
+  <text x="1370" y="406" class="s">backend is offline</text>
+  <rect class="box" x="1354" y="436" width="182" height="102" rx="14"/>
+  <text x="1370" y="464" class="t">js/filters.js</text>
+  <text x="1370" y="486" class="s">filter form:</text>
+  <text x="1370" y="506" class="s">time, place, distance,</text>
+  <text x="1370" y="526" class="s">fare, payment</text>
+  <rect class="box" x="1354" y="556" width="182" height="102" rx="14"/>
+  <text x="1370" y="584" class="t">js/charts.js</text>
+  <text x="1370" y="606" class="s">Chart.js line</text>
+  <text x="1370" y="626" class="s">and bar charts</text>
+  <rect class="box" x="1354" y="676" width="182" height="64" rx="14"/>
+  <text x="1370" y="704" class="t">js/app.js</text>
+  <text x="1370" y="724" class="s">tables · sorting · popup</text>
+
+  <!-- edges -->
+  <path class="edge" d="M306,220 H374"/>
+  <path class="edge" d="M306,328 C340,328 340,232 372,232"/>
+  <path class="edge" d="M306,436 C344,436 344,250 372,250"/>
+  <path class="edge" d="M515,280 V296"/>
+  <path class="edge" d="M515,402 V418"/>
+  <path class="edge" d="M515,524 V540"/>
+  <path class="edge" d="M515,626 V642"/>
+  <path class="edge" d="M656,584 C690,584 690,252 722,252"/>
+  <path class="edge" d="M656,584 C690,584 690,402 722,402"/>
+  <text x="660" y="606" class="el">load_data.py</text>
+  <path class="edge" d="M870,462 V478"/>
+  <path class="edge" d="M1016,544 C1050,544 1050,380 1082,380"/>
+  <path class="edge" d="M1016,404 C1050,404 1050,370 1082,370"/>
+  <path class="edge" d="M1185,438 V454"/>
+  <path class="edge" d="M1185,298 V314"/>
+  <path class="edge" d="M1185,578 V594"/>
+  <path class="edge" d="M1286,236 C1320,236 1320,366 1352,366"/>
+  <text x="1290" y="226" class="el">JSON</text>
+
+  <text x="48" y="886" class="s">Chart queries read the roll-ups (~10× fewer rows); the trip explorer and trip detail read the fact table through its indexes.</text>
+</svg>
+</body>
+</html>

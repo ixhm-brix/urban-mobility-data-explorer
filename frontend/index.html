@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Urban Mobility Data Explorer</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <header class="header">
+    <div class="container">
+      <h1>Urban Mobility Data Explorer</h1>
+      <p>NYC Yellow Taxi trips — January 2019</p>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- Filters -->
+    <section class="panel">
+      <h2>Filters</h2>
+      <form id="filters" class="filters">
+        <label>Start date
+          <input type="date" name="start" min="2019-01-01" max="2019-01-31">
+        </label>
+        <label>End date
+          <input type="date" name="end" min="2019-01-01" max="2019-01-31">
+        </label>
+        <label>Hour from
+          <select name="hour_from"></select>
+        </label>
+        <label>Hour to
+          <select name="hour_to"></select>
+        </label>
+        <label>Days
+          <select name="days">
+            <option value="">All days</option>
+            <option value="0,1,2,3,4">Weekdays</option>
+            <option value="5,6">Weekends</option>
+          </select>
+        </label>
+        <label>Pickup borough
+          <select name="borough"><option value="">All boroughs</option></select>
+        </label>
+        <label>Pickup zone
+          <select name="zone"><option value="">All zones</option></select>
+        </label>
+        <label>Distance
+          <select name="dist"><option value="">Any distance</option></select>
+        </label>
+        <label>Fare
+          <select name="fare"><option value="">Any fare</option></select>
+        </label>
+        <label>Payment
+          <select name="payment"><option value="">Any payment</option></select>
+        </label>
+        <div class="filter-buttons">
+          <button type="submit" class="btn primary">Apply</button>
+          <button type="button" class="btn" id="reset">Reset</button>
+        </div>
+      </form>
+      <p class="status" id="status"></p>
+    </section>
+
+    <!-- Summary -->
+    <section>
+      <h2>Summary</h2>
+      <div class="cards" id="summary"></div>
+    </section>
+
+    <!-- Insights -->
+    <section>
+      <h2>Key insights</h2>
+      <div class="insights" id="insights"></div>
+    </section>
+
+    <!-- Charts -->
+    <section>
+      <h2>Trends</h2>
+      <div class="grid">
+        <div class="panel">
+          <h3>Trips per day</h3>
+          <canvas id="chart-daily"></canvas>
+        </div>
+        <div class="panel">
+          <h3>Average trips per hour of day</h3>
+          <canvas id="chart-hourly"></canvas>
+        </div>
+        <div class="panel">
+          <h3>Average speed by hour (mph)</h3>
+          <canvas id="chart-speed"></canvas>
+        </div>
+        <div class="panel">
+          <h3>Fare per mile by trip distance ($)</h3>
+          <canvas id="chart-distance"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Locations -->
+    <section>
+      <h2>Locations</h2>
+      <div class="grid">
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Top pickup zones</h3>
+            <select id="zone-metric">
+              <option value="trips">Most trips</option>
+              <option value="avg_fare">Highest average fare</option>
+              <option value="avg_speed">Fastest</option>
+              <option value="avg_speed|asc">Slowest</option>
+              <option value="tip_pct">Highest tip %</option>
+            </select>
+          </div>
+          <table class="table">
+            <thead><tr><th>#</th><th>Zone</th><th>Borough</th><th class="num" id="zone-metric-head">Trips</th></tr></thead>
+            <tbody id="zone-rows"></tbody>
+          </table>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Top routes</h3>
+            <select id="route-metric">
+              <option value="trips">Busiest</option>
+              <option value="avg_fare">Most expensive</option>
+              <option value="avg_speed|asc">Slowest</option>
+              <option value="detour_index">Most indirect</option>
+            </select>
+          </div>
+          <table class="table">
+            <thead><tr><th>#</th><th>From</th><th>To</th><th class="num" id="route-metric-head">Trips</th></tr></thead>
+            <tbody id="route-rows"></tbody>
+          </table>
+          <p class="note" id="route-note"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Trips table -->
+    <section>
+      <h2>Trips</h2>
+      <div class="panel">
+        <p class="hint">Click a column name to sort. Click a row to see trip details.</p>
+        <div class="table-scroll">
+          <table class="table" id="trips-table">
+            <thead>
+              <tr>
+                <th data-sort="pickup" class="sortable">Pickup time</th>
+                <th>From</th>
+                <th>To</th>
+                <th data-sort="distance" class="sortable num">Distance (mi)</th>
+                <th data-sort="duration" class="sortable num">Duration (min)</th>
+                <th data-sort="speed" class="sortable num">Speed (mph)</th>
+                <th data-sort="fare" class="sortable num">Fare ($)</th>
+                <th class="num">Tip ($)</th>
+                <th>Payment</th>
+              </tr>
+            </thead>
+            <tbody id="trip-rows"></tbody>
+          </table>
+        </div>
+        <div class="pager">
+          <button class="btn" id="prev">Previous</button>
+          <span id="page-info"></span>
+          <button class="btn" id="next">Next</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Data quality -->
+    <section>
+      <h2>Data cleaning log</h2>
+      <div class="panel">
+        <p id="quality-summary"></p>
+        <table class="table">
+          <thead><tr><th>Rule</th><th>Action</th><th>Description</th><th class="num">Records</th></tr></thead>
+          <tbody id="quality-rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">Data source: NYC Taxi &amp; Limousine Commission (TLC) — Yellow Taxi Trip Records, January 2019.</div>
+  </footer>
+
+  <!-- Trip detail popup -->
+  <div class="modal" id="modal" hidden>
+    <div class="modal-box">
+      <button class="modal-close" id="modal-close" aria-label="Close">&times;</button>
+      <h2>Trip details</h2>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/filters.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

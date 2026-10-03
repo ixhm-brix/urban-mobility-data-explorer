@@ -1,0 +1,138 @@
+/* Urban Mobility Data Explorer — simple stylesheet */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  color: #222;
+  background: #f4f6f8;
+}
+
+.container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+/* Header */
+.header { background: #1f4e79; color: #fff; padding: 24px 0; }
+.header h1 { margin: 0; font-size: 26px; }
+.header p { margin: 4px 0 0; opacity: .85; }
+
+section { margin-top: 28px; }
+h2 { font-size: 20px; margin: 0 0 12px; }
+h3 { font-size: 16px; margin: 0 0 12px; }
+
+/* Panels */
+.panel {
+  background: #fff;
+  border: 1px solid #dde3e9;
+  border-radius: 8px;
+  padding: 18px;
+}
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
+.panel-head select { width: auto; }
+.panel-head h3 { margin: 0; }
+
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* Filters */
+.filters { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.filters label { display: flex; flex-direction: column; font-size: 13px; color: #555; gap: 4px; }
+input, select {
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+  padding: 7px 8px;
+  border: 1px solid #c7d0d9;
+  border-radius: 5px;
+  background: #fff;
+}
+.filter-buttons { display: flex; gap: 8px; align-items: flex-end; }
+
+.btn {
+  font: inherit;
+  padding: 8px 16px;
+  border: 1px solid #c7d0d9;
+  border-radius: 5px;
+  background: #fff;
+  cursor: pointer;
+}
+.btn:hover { background: #eef2f5; }
+.btn.primary { background: #1f4e79; border-color: #1f4e79; color: #fff; }
+.btn.primary:hover { background: #173b5c; }
+.btn:disabled { opacity: .5; cursor: default; }
+
+.status { margin: 10px 0 0; font-size: 13px; color: #666; min-height: 18px; }
+.note, .hint { font-size: 13px; color: #666; margin: 8px 0 0; }
+.hint { margin: 0 0 10px; }
+
+/* Summary cards */
+.cards { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+.card {
+  background: #fff;
+  border: 1px solid #dde3e9;
+  border-radius: 8px;
+  padding: 14px;
+}
+.card .label { font-size: 13px; color: #666; }
+.card .value { font-size: 24px; font-weight: bold; margin-top: 4px; color: #1f4e79; }
+
+/* Insights */
+.insights { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.insight { background: #fff; border: 1px solid #dde3e9; border-left: 4px solid #1f4e79; border-radius: 8px; padding: 16px; }
+.insight h3 { font-size: 15px; color: #1f4e79; margin-bottom: 6px; }
+.insight .headline { font-weight: bold; margin: 0 0 6px; }
+.insight p { margin: 0; font-size: 14px; color: #444; line-height: 1.45; }
+
+/* Tables */
+.table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.table th, .table td { padding: 8px; border-bottom: 1px solid #e6eaee; text-align: left; }
+.table th { background: #f0f3f6; font-size: 13px; }
+.table .num { text-align: right; }
+.table tbody tr:hover { background: #f7f9fb; }
+.table-scroll { overflow-x: auto; }
+
+#trips-table tbody tr { cursor: pointer; }
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { background: #e4e9ee; }
+th.sorted-asc::after { content: " ▲"; font-size: 10px; }
+th.sorted-desc::after { content: " ▼"; font-size: 10px; }
+
+.pager { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 12px; font-size: 14px; }
+
+/* Modal */
+.modal {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, .4);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.modal[hidden] { display: none; }
+.modal-box {
+  position: relative;
+  background: #fff;
+  border-radius: 8px;
+  padding: 22px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow: auto;
+}
+.modal-close {
+  position: absolute; top: 10px; right: 12px;
+  border: 0; background: none; font-size: 26px; cursor: pointer; color: #666;
+}
+.details { width: 100%; border-collapse: collapse; font-size: 14px; }
+.details td { padding: 6px 4px; border-bottom: 1px solid #eee; }
+.details td:first-child { color: #666; width: 45%; }
+
+.footer { margin-top: 40px; padding: 20px 0; background: #e9edf1; font-size: 13px; color: #555; }
+
+/* Smaller screens */
+@media (max-width: 1000px) {
+  .filters { grid-template-columns: repeat(3, 1fr); }
+  .cards { grid-template-columns: repeat(3, 1fr); }
+  .insights, .grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .filters, .cards { grid-template-columns: 1fr 1fr; }
+}

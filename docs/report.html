@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Technical Report — Urban Mobility Data Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; margin: 18mm 17mm 18mm 17mm; }
+  :root { --ink: #1d1d1f; --ink2: #424245; --ink3: #6e6e73; --line: #d2d2d7; --wash: #f5f5f7; --blue: #2a78d6; --blue-wash: #e8f1fc; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 400 10pt/1.5 Inter, -apple-system, system-ui, sans-serif; color: var(--ink); letter-spacing: -0.005em; font-feature-settings: "cv11"; }
+  h1 { font-size: 30pt; line-height: 1.05; letter-spacing: -0.035em; margin: 0 0 8pt; font-weight: 700; }
+  h2 { font-size: 15pt; letter-spacing: -0.022em; margin: 20pt 0 6pt; font-weight: 700; break-after: avoid; }
+  h3 { font-size: 11pt; letter-spacing: -0.012em; margin: 12pt 0 3pt; font-weight: 600; break-after: avoid; }
+  p { margin: 0 0 7pt; color: var(--ink2); }
+  ul, ol { margin: 0 0 8pt; padding-left: 15pt; color: var(--ink2); }
+  li { margin-bottom: 2.5pt; }
+  b, strong { color: var(--ink); font-weight: 600; }
+  code { font: 500 8.6pt/1.4 "SF Mono", ui-monospace, Menlo, monospace; background: var(--wash); padding: 0.5pt 3pt; border-radius: 3pt; }
+  pre { font: 8.4pt/1.45 "SF Mono", ui-monospace, Menlo, monospace; background: var(--wash); padding: 8pt 10pt; border-radius: 8pt; margin: 4pt 0 9pt; white-space: pre-wrap; break-inside: avoid; color: var(--ink); }
+  table { width: 100%; border-collapse: collapse; margin: 4pt 0 10pt; font-size: 8.8pt; break-inside: avoid; }
+  th { text-align: left; font-weight: 600; color: var(--ink3); font-size: 7.8pt; letter-spacing: .03em; text-transform: uppercase; padding: 4pt 6pt; border-bottom: 1pt solid var(--line); }
+  td { padding: 4pt 6pt; border-bottom: 0.5pt solid #e8e8ed; vertical-align: top; color: var(--ink2); }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  td b { color: var(--ink); }
+  .eyebrow { font-size: 8pt; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink3); margin-bottom: 10pt; }
+  .lede { font-size: 12.5pt; line-height: 1.42; color: var(--ink2); max-width: 150mm; margin-bottom: 14pt; letter-spacing: -0.012em; }
+  .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8pt; margin: 14pt 0 6pt; }
+  .stat { background: var(--wash); border-radius: 9pt; padding: 8pt 10pt; }
+  .stat .k { font-size: 7.6pt; color: var(--ink3); }
+  .stat .v { font-size: 15pt; font-weight: 700; letter-spacing: -0.025em; }
+  .callout { background: var(--blue-wash); border-radius: 9pt; padding: 9pt 12pt; margin: 6pt 0 10pt; break-inside: avoid; }
+  .callout p { margin: 0; color: var(--ink); }
+  .insight { border: 0.75pt solid var(--line); border-radius: 10pt; padding: 10pt 12pt; margin: 8pt 0; break-inside: avoid; }
+  .insight .big { font-size: 22pt; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+  .insight .hl { font-weight: 600; color: var(--ink); margin: 4pt 0 3pt; font-size: 10.5pt; }
+  .figure { margin: 6pt 0 10pt; break-inside: avoid; }
+  .figure img { width: 100%; border-radius: 8pt; border: 0.5pt solid var(--line); }
+  .cap { font-size: 8pt; color: var(--ink3); margin-top: 4pt; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14pt; }
+  .page-break { break-before: page; }
+  .toc { columns: 2; font-size: 9pt; color: var(--ink2); margin: 0; padding-left: 14pt; }
+  hr { border: 0; border-top: 0.75pt solid var(--line); margin: 14pt 0; }
+</style>
+</head>
+<body>
+
+<div class="eyebrow">Technical report · Urban Mobility Data Explorer</div>
+<h1>How New York moved in January 2019</h1>
+<p class="lede">An end-to-end system that cleans 7.7 million NYC yellow-taxi trip records, stores them in a normalised relational database and serves an interactive dashboard for exploring when, where and at what price the city moves.</p>
+<p><b>Team:</b> ____________________________ &nbsp;·&nbsp; <b>Repository:</b> ____________________________ &nbsp;·&nbsp; <b>Video:</b> ____________________________</p>
+
+<div class="meta">
+  <div class="stat"><div class="k">Raw records</div><div class="v">7,696,617</div></div>
+  <div class="stat"><div class="k">Excluded</div><div class="v">113,386</div></div>
+  <div class="stat"><div class="k">Clean trips stored</div><div class="v">7,583,231</div></div>
+  <div class="stat"><div class="k">Taxi zones mapped</div><div class="v">263</div></div>
+</div>
+
+<ol class="toc">
+  <li>Problem framing and dataset analysis</li>
+  <li>Data cleaning and transparency</li>
+  <li>Feature engineering</li>
+  <li>System architecture and design decisions</li>
+  <li>Database design</li>
+  <li>Algorithmic logic: top-K heap</li>
+  <li>Insights and interpretation</li>
+  <li>Dashboard design</li>
+  <li>Reflection and future work</li>
+</ol>
+
+<h2>1. Problem framing and dataset analysis</h2>
+<p>The task is to turn three raw TLC files into a system that answers questions about urban movement. The files are a trip-level fact table, a zone lookup and a zone shapefile. We used the official <code>yellow_tripdata_2019-01.parquet</code> (January 2019, the month provided by the course) with the matching <code>taxi_zone_lookup.csv</code> and <code>taxi_zones</code> shapefile.</p>
+<h3>What profiling revealed</h3>
+<p>Before writing any cleaning rule we profiled every column (missing values, percentiles, value counts). Each rule in section 2 traces back to one of these observations:</p>
+<ul>
+  <li><b>Timestamps outside the month.</b> Pickups range from 2001-02-02 to 2088-01-24. 536 records fall outside January 2019 (meter clock errors).</li>
+  <li><b>Impossible durations.</b> 6,557 trips end at or before they start. 20,534 last longer than 6 hours: the meter was left running.</li>
+  <li><b>Zero and extreme distances.</b> 55,089 trips report 0 miles; the maximum is 831.8 miles.</li>
+  <li><b>Refunds and voids.</b> 7,129 negative fares (as low as −$362) and a maximum fare of $623,259.86.</li>
+  <li><b>A block of incomplete rows.</b> 28,672 rows lack passenger count, rate code and store-and-forward flag, and all carry payment type 0. They come from one vendor feed. The trips themselves look valid.</li>
+  <li><b>Structural nulls.</b> <code>congestion_surcharge</code> is empty for 63% of rows because the NYS surcharge only began on 1 February 2019. <code>airport_fee</code> is entirely empty.</li>
+  <li><b>No exact duplicates</b>, but we still check for logical duplicates (the same trip submitted twice).</li>
+  <li><b>Spatial defects.</b> The shapefile has 263 polygons but two IDs repeat (56 twice; 103 three times) while 57, 104 and 105 are missing. This is a known TLC defect: Corona and the three harbour islands carry the wrong IDs.</li>
+</ul>
+<p>The spatial file is in <b>NY State Plane Long Island (US feet)</b>, not longitude/latitude, so it has to be reprojected before a browser can draw it.</p>
+
+<h2>2. Data cleaning and transparency</h2>
+<p>Cleaning is declarative. <code>pipeline/clean.py</code> defines each rule once, with a code, a description and a vectorised test. A record that fails any <b>exclusion</b> rule is removed and written to <code>pipeline/logs/excluded_records.csv</code> together with <i>every</i> rule it broke (for example <code>DURATION_TOO_SHORT|DISTANCE_ZERO</code>). Rules can overlap, so the counts below add up to more than the 113,386 excluded trips (1.47% of the raw file).</p>
+<table>
+  <tr><th>Rule</th><th>Threshold and reasoning</th><th class="n">Records</th></tr>
+  <tr><td><b>Duration too short</b></td><td>Under 1 minute: the meter was started or stopped by accident</td><td class="n">67,801</td></tr>
+  <tr><td><b>Distance zero</b></td><td>Under 0.01 mi: cancelled or no-trip rides</td><td class="n">55,089</td></tr>
+  <tr><td><b>Duration too long</b></td><td>Over 4 h: meter left running (NYC trips beyond this are not plausible door-to-door)</td><td class="n">20,766</td></tr>
+  <tr><td><b>Fare below minimum</b></td><td>Under the 2019 flag-drop of $2.50: refunds, voids, disputes</td><td class="n">10,866</td></tr>
+  <tr><td><b>Negative component</b></td><td>Any negative extra, tax, tip, toll or surcharge</td><td class="n">7,134</td></tr>
+  <tr><td><b>Speed impossible</b></td><td>Over 65 mph average door-to-door, above any NYC limit</td><td class="n">6,584</td></tr>
+  <tr><td><b>Time non-positive</b></td><td>Drop-off at or before pickup</td><td class="n">6,557</td></tr>
+  <tr><td><b>Time out of period</b></td><td>Pickup not in January 2019</td><td class="n">537</td></tr>
+  <tr><td><b>Invalid rate code</b></td><td>RatecodeID 99, undefined in the data dictionary</td><td class="n">252</td></tr>
+  <tr><td><b>Total mismatch</b></td><td>Total differs from the sum of its parts by more than $5</td><td class="n">158</td></tr>
+  <tr><td><b>Invalid vendor</b></td><td>VendorID 5, not in the dictionary</td><td class="n">99</td></tr>
+  <tr><td><b>Passengers over capacity</b></td><td>More than 6, the largest legal yellow cab</td><td class="n">57</td></tr>
+  <tr><td><b>Fare too high / distance too long</b></td><td>Fare over $500; distance over 100 mi</td><td class="n">34 / 32</td></tr>
+  <tr><td><b>Duplicate trip</b></td><td>Same vendor, timestamps, zones, distance and fare as an earlier valid row</td><td class="n">5</td></tr>
+</table>
+
+<div class="callout"><p><b>A rule we changed after inspecting its output.</b> Our first total-consistency rule allowed only $1 of slack and removed 15,675 trips. Looking at those rows, almost every gap was about $2.50: some meters were already charging the congestion surcharge in January but leaving its column blank. These are valid trips, so we raised the exclusion threshold to $5 (158 records) and log the $1–5 cases as "suspicious but kept".</p></div>
+
+<h3>Repairs (kept, value made explicit)</h3>
+<ul>
+  <li><b>Passenger count 0 → NULL</b> (114,712): the driver skipped the keypad; zero passengers is not a real trip. A further 28,013 were already missing.</li>
+  <li><b>Missing rate code → 99 "Unknown"; payment type 0 → 5 "Unknown"; missing store-and-forward flag → "N"</b> (28,013 each). This keeps the trip without guessing.</li>
+  <li><b>Congestion surcharge NULL → $0</b> (4,811,978): the surcharge did not exist yet, so zero is the true value, not an imputation.</li>
+</ul>
+<h3>Suspicious but kept (logged in <code>suspicious_records.csv</code>)</h3>
+<p>Pickup or drop-off in zone 264/265 "Unknown / Outside NYC" (168,201); total $1–5 above its components (15,670); tip larger than the fare (4,475); under 2 mph for over 30 minutes (1,119); negotiated fare over $50 for under a mile (423). These records are plausible, but analysts should know they are there. The dashboard's <i>Data quality</i> section shows all three groups, read from the <code>data_quality_rules</code> table.</p>
+
+<h3>Normalisation</h3>
+<p>Every downstream name is snake_case (<code>PULocationID</code> → <code>pu_location_id</code>). Timestamps are stored as one canonical text form, <code>YYYY-MM-DD HH:MM:SS</code> in NYC local time, which sorts chronologically and keeps range filters index-friendly. Money is rounded to cents, and categorical codes are integers with foreign keys into dimension tables.</p>
+
+<h2>3. Feature engineering</h2>
+<p><code>pipeline/features.py</code> derives four analytical features, each combining several raw columns to answer a question no single column can:</p>
+<table>
+  <tr><th>Feature</th><th>Formula</th><th>Why it matters</th></tr>
+  <tr><td><b>avg_speed_mph</b></td><td>distance ÷ (dropoff − pickup)</td><td>A congestion proxy. Distance and time alone mix up "long trip" with "slow trip"; speed separates them and shows where and when the city jams.</td></tr>
+  <tr><td><b>fare_per_mile</b></td><td>fare ÷ distance</td><td>Price efficiency. The meter charges for both distance and waiting, so $/mile rises with congestion. It exposes the hidden "traffic tax" by hour and zone.</td></tr>
+  <tr><td><b>tip_pct</b></td><td>tip ÷ fare × 100, <b>card trips only</b></td><td>Rider generosity. Cash tips are never recorded, so including cash trips would drag tips towards 0 (a classic bias in this dataset). Cash trips get NULL.</td></tr>
+  <tr><td><b>detour_index</b></td><td>distance ÷ straight-line distance between zone centroids</td><td>Route circuity. About 1.3 is normal for a street grid; high values reveal geography (rivers, bridges, highway access) that forces long detours. It is undefined for same-zone trips and for centroids under 0.25 mi apart, where rounding noise dominates.</td></tr>
+</table>
+<p>Supporting keys, cheap to index and used by every filter: <code>pickup_date</code>, <code>pickup_hour</code>, <code>pickup_dow</code>, <code>is_weekend</code>, <code>trip_duration_min</code>, <code>is_airport_trip</code> (JFK, LaGuardia, Newark), <code>is_cross_borough</code>, and categorical <code>distance_band_id</code> and <code>fare_band_id</code>. The bands make range filters answerable from the pre-aggregated tables (section 5).</p>
+
+<h2>4. System architecture and design decisions</h2>
+<div class="figure"><img src="architecture.png" alt="Architecture diagram"><div class="cap">Figure 1. Raw files → Python pipeline → SQLite → Flask API → browser dashboard. Source: docs/architecture.png.</div></div>
+<table>
+  <tr><th>Decision</th><th>Choice</th><th>Trade-off</th></tr>
+  <tr><td><b>Database</b></td><td>SQLite</td><td>Zero setup, one file, which makes it easy to reproduce and submit. It has no parallel query execution, so we pre-aggregate (below). PostgreSQL would scale further but adds operational weight that the assignment doesn't need.</td></tr>
+  <tr><td><b>Keep all 7.6 M trips</b></td><td>No sampling</td><td>Sampling would have been faster to build but loses rare routes and zones. Keeping the full month made a roll-up design necessary.</td></tr>
+  <tr><td><b>Roll-up tables</b></td><td><code>agg_zone_hour</code>, <code>agg_od</code></td><td>A raw scan of 7.6 M rows takes 1–8 s in SQLite, and the dashboard issues about 12 queries per filter change. The roll-ups make chart queries about 10× smaller (0.2–1.2 s cold, instant from cache). The cost is that route rankings cannot honour date or payment filters, and the API reports this in <code>meta.ignored_filters</code>, which the UI shows as a note.</td></tr>
+  <tr><td><b>Backend</b></td><td>Flask, SQL in <code>.sql</code> files</td><td>Every value is validated and bound as a parameter; only whitelisted column names are interpolated. Connections are read-only, results go through an LRU cache, and a progress-handler watchdog aborts any query running longer than 8 s with HTTP 503 instead of hanging.</td></tr>
+  <tr><td><b>Frontend</b></td><td>Plain HTML/CSS/JS + Chart.js</td><td>Simple to read and maintain, with no build step. Chart.js gives tooltips and responsive charts out of the box. A framework (React, Vue) would add tooling the project doesn't need.</td></tr>
+</table>
+
+<h2>5. Database design</h2>
+<p>The schema is a star: the <code>trips</code> fact table, with foreign keys to normalised dimensions (<code>boroughs</code>, <code>service_zones</code>, <code>zones</code>, <code>zone_geometry</code>, <code>vendors</code>, <code>rate_codes</code>, <code>payment_types</code>, <code>time_bands</code>, <code>distance_bands</code>, <code>fare_bands</code>). Zones are in 3NF: borough and service zone are separate tables, not repeated strings. Polygons live in their own table because only the map needs them. <code>CHECK</code> constraints encode the cleaning rules (for example <code>fare_amount &gt;= 2.5</code> and <code>dropoff_datetime &gt; pickup_datetime</code>), so the database itself refuses invalid data. The loader also runs <code>PRAGMA foreign_key_check</code> and checks that both roll-ups sum to exactly the number of trips.</p>
+<h3>Indexes and the queries they serve</h3>
+<table>
+  <tr><th>Index</th><th>Access path</th></tr>
+  <tr><td><code>trips(pickup_datetime)</code></td><td>Date-range filters; default sort in the trip explorer</td></tr>
+  <tr><td><code>trips(pu_location_id, pickup_datetime)</code>, <code>(do_location_id, …)</code></td><td>Everything about one zone, already in time order</td></tr>
+  <tr><td><code>trips(pu_location_id, do_location_id)</code></td><td>Route look-ups</td></tr>
+  <tr><td><code>trips(trip_distance)</code>, <code>(fare_amount)</code>, <code>(trip_duration_min)</code>, <code>(avg_speed_mph)</code></td><td>Sortable explorer columns: <code>ORDER BY … LIMIT 25</code> walks the index instead of sorting millions of rows</td></tr>
+  <tr><td><code>agg_zone_hour</code> PK + <code>(pu_location_id, pickup_date)</code></td><td>Every chart</td></tr>
+</table>
+<p><b>A query-planning problem we fixed.</b> With a Manhattan filter, the trip explorer timed out: SQLite drove the query from the zone index, gathered 6.9 M Manhattan trips and then sorted them. Two changes fixed it. First, the 25-row page is now selected from <code>trips</code> alone before the label joins. Second, the API checks the borough's share of trips in the roll-up and, for large boroughs, writes the filter as <code>+pu_location_id IN (…)</code>, telling SQLite to walk the sort index instead. Every explorer combination we tested now returns in under 1.7 s.</p>
+
+<h2>6. Algorithmic logic: top-K selection with a hand-written heap</h2>
+<p>The dashboard constantly ranks things: the busiest of ~32,000 routes, the slowest of 263 zones, the most circuitous routes. Instead of <code>ORDER BY … LIMIT</code>, the SQL returns <i>unordered</i> aggregates and <code>algorithms/top_k_heap.py</code> selects the K best. It is implemented by hand, with no <code>heapq</code>, <code>sorted()</code> or <code>list.sort()</code>.</p>
+<pre>TOP_K(items, K, score):
+    H ← empty array-backed min-heap          # root = weakest of the current best K
+    for x in items:
+        s ← score(x)
+        if |H| &lt; K:          H.push((s, x));      SIFT_UP     O(log K)
+        elif s &gt; H.root.s:   H.root ← (s, x);     SIFT_DOWN   O(log K)
+        else:                discard                          O(1)
+    return MERGE_SORT_DESC(H)                                 O(K log K)</pre>
+<p><b>Complexity:</b> O(n log K) time and O(K) extra space, against O(n log n) time and O(n) space for a full sort. For n = 32,000 routes and K = 10 that is about 106k comparisons instead of about 480k. Ties are broken by insertion order, so results are deterministic. A self-test compares the output with a reference sort (<code>python algorithms/top_k_heap.py</code>). The API reports <code>"algorithm": "top_k_heap"</code> and the number of candidates in each ranked response.</p>
+
+<h2>7. Insights and interpretation</h2>
+<p>The dashboard opens with three insights computed live by <code>algorithms/insights.py</code>. They recalculate under any filter, so a reader can check whether a pattern holds for one borough, one week or one hour.</p>
+
+<div class="insight">
+  <div class="big">52%</div>
+  <div class="hl">Traffic is 52% slower at 9 am than at 5 am.</div>
+  <p>Network speed (total miles ÷ total hours) peaks at 23.0 mph at 5 am and bottoms out at 10.9 mph at 9 am. It stays between 11 and 12.5 mph through the working day and only recovers after 7 pm. Because the meter charges for waiting time, congestion feeds straight into price: fare per mile rises from $3.46 at 5 am to $4.79 at 9 am, a 38% "traffic tax". Weekends move faster (14.3 vs 12.8 mph). <b>Implication:</b> peak-hour pricing and dispatch planning should target the 8 am–7 pm band; the morning ramp is the steepest.</p>
+</div>
+<div class="insight">
+  <div class="big">2.9×</div>
+  <div class="hl">Trips under a mile cost 2.9× more per mile than trips over 20 miles.</div>
+  <p>$8.04/mi for trips under 1 mi versus $2.76/mi for trips over 20 mi. The flag drop and slow speeds (7.6 mph) dominate short trips, while long trips run at 29.6 mph. 27% of all trips fall in the shortest band, so most riders pay the premium rate. Short-trip riders also tip the highest share of the fare (24.6% vs 17.2%), partly because tip presets are percentage-based while the fares are small. <b>Implication:</b> short Manhattan hops are where micromobility (bikes, scooters) competes most directly with taxis.</p>
+</div>
+<div class="insight">
+  <div class="big">3.2×</div>
+  <div class="hl">Airport pickups are 4.9% of trips but 15.5% of revenue.</div>
+  <p>Each JFK, LaGuardia or Newark pickup earns about 3.2× an average ride, and 6.4% of all trips touch an airport. LaGuardia alone has 182,203 pickups at 21.3 mph average, far faster than Midtown. <b>Implication:</b> airport queues are economically rational for drivers despite the wait, which explains the long taxi lines at JFK and LGA.</p>
+</div>
+
+<h3>Other patterns the dashboard surfaces</h3>
+<ul>
+  <li><b>Manhattan is the system.</b> 84.9% of all trips start and end in Manhattan. The busiest single route, Upper East Side South → North (50,844 trips, $6.27 average), is about one mile long.</li>
+  <li><b>The slowest zones are Midtown transit hubs.</b> Penn Station/Madison Sq West (9.4 mph), Upper East Side South (10.0) and Union Sq (10.1).</li>
+  <li><b>Geography forces detours.</b> The most indirect route is Lenox Hill East → Roosevelt Island: 4.2 road miles for an island a few hundred metres away (detour index 11.8), because cars must use the Queensboro Bridge and come back over the Roosevelt Island Bridge.</li>
+  <li><b>Demand rhythm.</b> Daily volume rises from 185,693 on New Year's Day to a peak of 288,428 on Friday 25 January, with clear dips on weekends and Martin Luther King Jr. Day (annotated on the chart).</li>
+  <li><b>An equity flag worth investigating.</b> Card tips average 22–23% in Manhattan and at LaGuardia but under 1% in Brownsville, East New York and Canarsie (each with 1,000+ pickups). We read this cautiously: it may reflect different payment practices or recording rather than rider behaviour, but it is the kind of question the system makes easy to ask.</li>
+</ul>
+
+<h2>8. Dashboard design</h2>
+<p>The dashboard is deliberately simple: one page built with plain HTML, CSS and JavaScript, using Chart.js for the charts. All network calls live in <code>js/api.js</code>, the filter form in <code>js/filters.js</code>, chart drawing in <code>js/charts.js</code> and page logic in <code>js/app.js</code>. If the backend is not running, the page falls back to recorded sample responses (<code>mock/sample_responses.json</code>).</p>
+<ul>
+  <li><b>Filtering:</b> a single form covers time (date range, hour window, weekdays or weekends), location (pickup borough or zone), distance band, fare band and payment type. <b>Apply</b> updates every section; <b>Reset</b> clears it.</li>
+  <li><b>Visual summaries:</b> six summary cards and three insight cards, followed by four charts.</li>
+  <li><b>Sorting and detail views:</b> the trip table sorts by pickup time, distance, duration, speed or fare (all indexed in the database) and is paginated. Clicking a row opens a popup with the full record, the fare breakdown and a comparison with the same route at the same hour.</li>
+  <li><b>Rankings:</b> top-10 pickup zones and routes, switchable between trips, fare, speed, tip % and detour. They are ranked by the custom heap from section 6.</li>
+  <li><b>Transparency:</b> the cleaning log table lists every rule and its record count. When the route table cannot honour a filter, a note says which one.</li>
+</ul>
+<p><b>Why these charts.</b> <b>Trips per day</b> shows the month's rhythm: weekend dips, New Year's Day and Martin Luther King Jr. Day. <b>Average trips per hour</b> (divided by the number of days, so filters stay comparable) shows the daily demand curve. <b>Average speed by hour</b> is a separate chart rather than a second axis on the demand chart, and makes the rush-hour slowdown visible. <b>Fare per mile by distance</b> shows the short-trip premium. Location is covered by ranked tables of zones and routes rather than a map, which keeps the interface simple and the numbers exact.</p>
+
+<h2>9. Reflection and future work</h2>
+<p><b>Technical challenges.</b> (1) Query latency on 7.6 M rows in SQLite, solved with banded roll-ups, careful indexing and plan control. (2) Silent data defects: the mislabelled shapefile IDs, and the unlisted congestion surcharge, which our first rule would have wrongly discarded. (3) Keeping filters honest across tables with different granularity, solved with the <code>ignored_filters</code> contract.</p>
+<p><b>What we would do next.</b></p>
+<ul>
+  <li>Add February–December 2019 to show the effect of the congestion surcharge introduced on 1 February.</li>
+  <li>Join NOAA weather to separate snow-day demand from the weekly rhythm.</li>
+  <li>Move to PostgreSQL with materialised views and PostGIS, so route rankings can honour every filter.</li>
+  <li>Add a zone map (the API already serves the zone polygons at <code>/api/zones/geojson</code>), and tests that pin each cleaning rule to fixture records.</li>
+</ul>
+
+<hr>
+<p style="font-size:8.5pt;color:#6e6e73">Reproduce: <code>pip install -r requirements.txt</code> → <code>python pipeline/run_pipeline.py</code> (≈1 min) → <code>python database/load_data.py --dump</code> (≈7 min) → <code>python backend/app.py</code> → open http://127.0.0.1:5000. Data: NYC Taxi &amp; Limousine Commission, Yellow Taxi Trip Records (January 2019) and Taxi Zone shapefile.</p>
+</body>
+</html>
