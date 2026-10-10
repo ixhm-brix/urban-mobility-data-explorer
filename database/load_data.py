@@ -160,35 +160,42 @@ def check_integrity(con: sqlite3.Connection) -> None:
     print(f"[db] integrity ok — {n_trips:,} trips, roll-up reconciles")
 
 
-def write_dumps(con: sqlite3.Connection) -> None:
-    """Two artefacts: a small readable dump (schema + dimensions + 5 000 trips)
-    and the complete database as gzip-compressed SQL."""
+SAMPLE_TRIPS = 500
+# Small lookup tables copied in full. zone_geometry is left out on purpose:
+# it is ~2 MB of polygon coordinates and the full dump already contains it.
+SAMPLE_TABLES = ("boroughs", "service_zones", "zones", "vendors", "rate_codes", "payment_types",
+                 "distance_bands", "fare_bands", "time_bands", "data_quality_rules", "data_quality_run")
+
+
+def write_dumps(db_path: Path, full: bool = True) -> None:
+    """Standard SQLite dumps (same format as `sqlite3 db .dump`):
+    a small sample you can open and read, and the whole database gzipped."""
     DUMP_DIR.mkdir(exist_ok=True)
-    small = DUMP_DIR / "urban_mobility_sample.sql"
-    with small.open("w") as fh:
-        fh.write("-- Schema, all dimension tables and the first 5 000 trips.\n")
-        fh.write(SCHEMA.read_text().replace("-- @indexes", "-- indexes") + "\n")
-        for table in ("boroughs", "service_zones", "zones", "zone_geometry", "vendors",
-                      "rate_codes", "payment_types", "distance_bands", "fare_bands",
-                      "time_bands", "data_quality_rules"):
-            _dump_rows(con, fh, table, f"SELECT * FROM {table}")
-        _dump_rows(con, fh, "trips", "SELECT * FROM trips ORDER BY trip_id LIMIT 5000")
-    print(f"[db] wrote {small.relative_to(ROOT)}")
-    full = DUMP_DIR / "urban_mobility_full.sql.gz"
-    with gzip.open(full, "wt", compresslevel=6) as fh:
-        for line in con.iterdump():
-            fh.write(line + "\n")
-    print(f"[db] wrote {full.relative_to(ROOT)} ({full.stat().st_size / 1e6:.0f} MB)")
 
+    sample_db = DUMP_DIR / "sample.tmp.db"
+    sample_db.unlink(missing_ok=True)
+    con = sqlite3.connect(sample_db)
+    con.executescript(split_schema()[0])
+    con.execute("ATTACH DATABASE ? AS src", (str(db_path),))
+    with con:
+        for table in SAMPLE_TABLES:
+            con.execute(f"INSERT INTO {table} SELECT * FROM src.{table}")
+        con.execute(f"INSERT INTO trips SELECT * FROM src.trips ORDER BY trip_id LIMIT {SAMPLE_TRIPS}")
+    con.execute("DETACH DATABASE src")
+    sample = DUMP_DIR / "urban_mobility_sample.sql"
+    sample.write_text("\n".join(con.iterdump()) + "\n")
+    con.close()
+    sample_db.unlink()
+    print(f"[db] wrote {sample.relative_to(ROOT)} ({sample.stat().st_size / 1e3:.0f} KB)")
 
-def _dump_rows(con, fh, table, query):
-    cur = con.execute(query)
-    cols = [d[0] for d in cur.description]
-    fh.write(f"\n-- {table}\n")
-    for row in cur:
-        vals = ", ".join("NULL" if v is None else repr(v) if not isinstance(v, str)
-                         else "'" + v.replace("'", "''") + "'" for v in row)
-        fh.write(f"INSERT INTO {table} ({', '.join(cols)}) VALUES ({vals});\n")
+    if full:
+        src = sqlite3.connect(db_path)
+        out = DUMP_DIR / "urban_mobility_full.sql.gz"
+        with gzip.open(out, "wt", compresslevel=6) as fh:
+            for line in src.iterdump():
+                fh.write(line + "\n")
+        src.close()
+        print(f"[db] wrote {out.relative_to(ROOT)} ({out.stat().st_size / 1e6:.0f} MB)")
 
 
 def main(dump: bool) -> None:
@@ -212,15 +219,20 @@ def main(dump: bool) -> None:
         record_quality(con)
     con.execute("ANALYZE")
     check_integrity(con)
-    if dump:
-        write_dumps(con)
     con.close()
     tmp.replace(DB_PATH)
+    if dump:
+        write_dumps(DB_PATH)
     print(f"[db] ready: {DB_PATH.relative_to(ROOT)} "
           f"({DB_PATH.stat().st_size / 1e9:.2f} GB, {time.time() - t0:.0f} s)")
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--dump", action="store_true", help="write SQL dumps to database/dump/")
-    main(ap.parse_args().dump)
+    ap.add_argument("--dump", action="store_true", help="rebuild the database, then write SQL dumps")
+    ap.add_argument("--dump-only", action="store_true", help="only write the sample dump from the existing database")
+    args = ap.parse_args()
+    if args.dump_only:
+        write_dumps(DB_PATH, full=False)
+    else:
+        main(args.dump)

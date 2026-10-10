@@ -89,7 +89,7 @@ urban-mobility-data-explorer/
 ├── database/
 │   ├── schema.sql         tables, keys, CHECK constraints, indexes (each one justified)
 │   ├── load_data.py       bulk insert → indexes → roll-ups → integrity checks → ANALYZE
-│   └── dump/              urban_mobility_sample.sql (schema, all dimensions, 5,000 trips)
+│   └── dump/              urban_mobility_sample.sql (standard SQLite dump: schema, lookup tables, 500 trips)
 ├── backend/
 │   ├── app.py             Flask entry point, error envelope, gzip, static hosting
 │   ├── db.py              read-only connections, LRU cache, query watchdog
@@ -132,5 +132,5 @@ A single page, top to bottom:
 
 ## Submission notes
 
-- The database file and the full dump (`database/dump/urban_mobility_full.sql.gz`, ~290 MB) exceed GitHub's limits and are git-ignored. Share the full dump separately (for example a Drive link or a GitHub Release), or rebuild it with the commands above. The committed `urban_mobility_sample.sql` restores the schema, all dimensions and 5,000 trips: `sqlite3 sample.db < database/dump/urban_mobility_sample.sql`.
+- The database file and the full dump (`database/dump/urban_mobility_full.sql.gz`, ~290 MB) exceed GitHub's limits and are git-ignored. Share the full dump separately (for example a Drive link or a GitHub Release), or rebuild it with the commands above. The committed `urban_mobility_sample.sql` is a small standard SQLite dump (schema, lookup tables and 500 trips; zone polygons left out). Restore it with `sqlite3 sample.db < database/dump/urban_mobility_sample.sql`, or regenerate it with `python database/load_data.py --dump-only`.
 - Restore the full dump with: `gunzip -c database/dump/urban_mobility_full.sql.gz | sqlite3 urban_mobility.db`.
