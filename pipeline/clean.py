@@ -23,10 +23,16 @@ import pandas as pd
 
 LOG_DIR = Path(__file__).resolve().parent / "logs"
 
-# Study window: the month the file is published for. Anything outside it is a
-# clock error on the meter (we see 2001, 2008 and even 2088 in Jan 2019).
-PERIOD_START = pd.Timestamp("2019-01-01")
-PERIOD_END = pd.Timestamp("2019-02-01")
+# Study window: the months being loaded. Anything outside it is a clock error on
+# the meter (Jan 2019 contains pickups dated 2001, 2008 and even 2088).
+# run_pipeline.py sets this from the --months argument.
+PERIOD = {"start": pd.Timestamp("2019-01-01"), "end": pd.Timestamp("2019-02-01")}
+
+
+def set_period(months: list[str]) -> None:
+    starts = [pd.Timestamp(m + "-01") for m in months]
+    PERIOD["start"] = min(starts)
+    PERIOD["end"] = max(starts) + pd.offsets.MonthBegin(1)
 
 MIN_DURATION_MIN = 1.0      # under a minute: meter started/stopped by accident
 MAX_DURATION_MIN = 240.0    # 4 h: longer means the meter was left running
@@ -61,8 +67,8 @@ def _total_gap(d):
 
 
 RULES: list[Rule] = [
-    Rule("TIME_OUT_OF_PERIOD", "Pickup timestamp outside the study month",
-         lambda d: ~d["tpep_pickup_datetime"].between(PERIOD_START, PERIOD_END, inclusive="left")),
+    Rule("TIME_OUT_OF_PERIOD", "Pickup timestamp outside the months being loaded",
+         lambda d: ~d["tpep_pickup_datetime"].between(PERIOD["start"], PERIOD["end"], inclusive="left")),
     Rule("TIME_NON_POSITIVE", "Dropoff is at or before pickup",
          lambda d: _duration_min(d) <= 0),
     Rule("DURATION_TOO_SHORT", f"Trip shorter than {MIN_DURATION_MIN:g} minute",
@@ -103,7 +109,7 @@ RULES: list[Rule] = [
 DUPLICATE_KEY = ["VendorID", "tpep_pickup_datetime", "tpep_dropoff_datetime",
                  "PULocationID", "DOLocationID", "trip_distance", "fare_amount"]
 
-LOG_COLUMNS = ["source_row", "reasons", "VendorID", "tpep_pickup_datetime", "tpep_dropoff_datetime",
+LOG_COLUMNS = ["source_file", "source_row", "reasons", "VendorID", "tpep_pickup_datetime", "tpep_dropoff_datetime",
                "trip_distance", "PULocationID", "DOLocationID", "passenger_count",
                "payment_type", "fare_amount", "tip_amount", "total_amount"]
 

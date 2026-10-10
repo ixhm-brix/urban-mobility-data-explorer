@@ -47,22 +47,31 @@ TRIP_COLUMNS = {
 }
 
 
-def find_trip_file() -> Path:
-    """Prefer parquet (the official format); accept CSV so the course copy works too."""
-    for pattern in ("yellow_tripdata*.parquet", "yellow_tripdata*.csv"):
-        hits = sorted(RAW.glob(pattern))
-        if hits:
-            return hits[0]
-    raise FileNotFoundError(f"No yellow_tripdata .parquet or .csv found in {RAW}")
+def find_trip_files(months: list[str] | None = None) -> list[Path]:
+    """The trip files for the requested months (YYYY-MM). Parquet is the official
+    format; a CSV of the same month is accepted too. No months = every file in data/raw/."""
+    if months:
+        files = []
+        for m in months:
+            hits = [RAW / f"yellow_tripdata_{m}.{ext}" for ext in ("parquet", "csv")]
+            found = [h for h in hits if h.exists()]
+            if not found:
+                raise FileNotFoundError(f"No trip file for {m} in {RAW}. "
+                                        f"Run: python pipeline/download.py --months {m}")
+            files.append(found[0])
+        return files
+    files = sorted(RAW.glob("yellow_tripdata*.parquet")) or sorted(RAW.glob("yellow_tripdata*.csv"))
+    if not files:
+        raise FileNotFoundError(f"No yellow_tripdata files in {RAW}. Run: python pipeline/download.py")
+    return files
 
 
-def load_trips(path: Path | None = None, limit: int | None = None) -> pd.DataFrame:
-    path = path or find_trip_file()
+def read_trip_file(path: Path, limit: int | None) -> pd.DataFrame:
     if path.suffix == ".parquet":
         cols = [c for c in TRIP_COLUMNS if c in pq.read_schema(path).names]
         df = pd.read_parquet(path, columns=cols)
     else:
-        df = pd.read_csv(path, low_memory=False,
+        df = pd.read_csv(path, low_memory=False, nrows=limit,
                          parse_dates=["tpep_pickup_datetime", "tpep_dropoff_datetime"])
     if limit:
         df = df.head(limit)
@@ -71,9 +80,17 @@ def load_trips(path: Path | None = None, limit: int | None = None) -> pd.DataFra
         if col not in df.columns:
             df[col] = pd.Series(pd.NA, index=df.index, dtype="Float64" if dtype == "float64" else dtype)
     df = df[list(TRIP_COLUMNS)]
-    # Remember the original row position so every excluded record can be traced back to the source file.
-    df.insert(0, "source_row", range(len(df)))
+    # Remember where each row came from, so every excluded record can be traced back.
+    df.insert(0, "source_file", path.name)
+    df.insert(1, "source_row", range(len(df)))
     print(f"[load] {len(df):,} raw trips from {path.name}")
+    return df
+
+
+def load_trips(months: list[str] | None = None, limit: int | None = None) -> pd.DataFrame:
+    """limit = max rows read from each month's file (for quick test runs)."""
+    frames = [read_trip_file(p, limit) for p in find_trip_files(months)]
+    df = pd.concat(frames, ignore_index=True) if len(frames) > 1 else frames[0]
     return df
 
 
@@ -180,8 +197,8 @@ def haversine_km(lon1, lat1, lon2, lat2):
     return 2 * r * math.asin(math.sqrt(h))
 
 
-def load_all(limit: int | None = None):
-    trips = load_trips(limit=limit)
+def load_all(months: list[str] | None = None, limit: int | None = None):
+    trips = load_trips(months, limit)
     lookup = load_zone_lookup()
     geo, geo_stats = load_zone_shapes(lookup)
     zones = lookup.merge(geo_stats, on="location_id", how="left")

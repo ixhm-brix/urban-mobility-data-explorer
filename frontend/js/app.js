@@ -228,6 +228,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal
   try {
     const { data } = await api.meta();
     setupFilters(data);
+    $("subtitle").textContent = `NYC Yellow Taxi trips — ${data.date_range.min} to ${data.date_range.max}`;
   } catch (err) {
     setStatus("Could not load filters: " + err.message);
   }

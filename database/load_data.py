@@ -223,7 +223,7 @@ def main(dump: bool) -> None:
     tmp.replace(DB_PATH)
     if dump:
         write_dumps(DB_PATH)
-    print(f"[db] ready: {DB_PATH.relative_to(ROOT)} "
+    print(f"[db] ready: {DB_PATH} "
           f"({DB_PATH.stat().st_size / 1e9:.2f} GB, {time.time() - t0:.0f} s)")
 
 

@@ -13,6 +13,12 @@ function addOptions(select, items) {
 
 // Fill the dropdowns using the reference data from /api/meta.
 function setupFilters(meta) {
+  // The date pickers only allow dates that exist in the loaded data.
+  for (const input of [form.start, form.end]) {
+    input.min = meta.date_range.min;
+    input.max = meta.date_range.max;
+  }
+
   const hours = [];
   for (let h = 0; h < 24; h++) hours.push({ id: h, name: hourLabel(h) });
   addOptions(form.hour_from, [{ id: "", name: "Any" }, ...hours]);

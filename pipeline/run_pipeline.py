@@ -1,8 +1,12 @@
 """
-Pipeline entry point:  raw  ->  load  ->  clean  ->  features  ->  normalise  ->  data/processed/
+Pipeline entry point:
+    download -> load -> clean -> features -> normalise -> data/processed/
 
-    python pipeline/run_pipeline.py            # full month
-    python pipeline/run_pipeline.py --limit 200000   # quick dev run
+    python pipeline/run_pipeline.py                          # January 2019, all rows
+    python pipeline/run_pipeline.py --months 2019-01 2019-02 # more data: several months
+    python pipeline/run_pipeline.py --limit 100000           # quick test: first 100k rows per month
+
+Missing raw files are downloaded from the TLC website automatically.
 """
 from __future__ import annotations
 
@@ -15,8 +19,9 @@ from pathlib import Path
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from download import download, DEFAULT_MONTHS  # noqa: E402
 from load import load_all, ROOT          # noqa: E402
-from clean import clean, write_summary   # noqa: E402
+from clean import clean, set_period, write_summary   # noqa: E402
 from features import add_features        # noqa: E402
 
 PROCESSED = ROOT / "data" / "processed"
@@ -52,9 +57,11 @@ def normalise(df: pd.DataFrame) -> pd.DataFrame:
     return df.sort_values("pickup_datetime").reset_index(drop=True)
 
 
-def main(limit: int | None = None) -> None:
+def main(months: list[str], limit: int | None = None) -> None:
     t0 = time.time()
-    trips, zones, geo = load_all(limit=limit)
+    download(months)
+    set_period(months)
+    trips, zones, geo = load_all(months, limit)
     trips, summary = clean(trips)
     trips = add_features(trips, zones)
     trips = normalise(trips)
@@ -63,6 +70,8 @@ def main(limit: int | None = None) -> None:
     trips.to_parquet(PROCESSED / "trips_clean.parquet", index=False)
     zones.to_csv(PROCESSED / "zones.csv", index=False)
     (PROCESSED / "taxi_zones.geojson").write_text(json.dumps(geo, separators=(",", ":")))
+    summary["months"] = months
+    summary["limit_per_month"] = limit
     summary["runtime_s"] = round(time.time() - t0, 1)
     path = write_summary(summary)
 
@@ -72,5 +81,7 @@ def main(limit: int | None = None) -> None:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--limit", type=int, default=None, help="only process the first N raw rows")
-    main(ap.parse_args().limit)
+    ap.add_argument("--months", nargs="+", default=DEFAULT_MONTHS, help="months to load, e.g. 2019-01 2019-02")
+    ap.add_argument("--limit", type=int, default=None, help="only read the first N rows of each month")
+    args = ap.parse_args()
+    main(args.months, args.limit)

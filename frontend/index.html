@@ -12,7 +12,7 @@
   <header class="header">
     <div class="container">
       <h1>Urban Mobility Data Explorer</h1>
-      <p>NYC Yellow Taxi trips — January 2019</p>
+      <p id="subtitle">NYC Yellow Taxi trips</p>
     </div>
   </header>
 
@@ -23,10 +23,10 @@
       <h2>Filters</h2>
       <form id="filters" class="filters">
         <label>Start date
-          <input type="date" name="start" min="2019-01-01" max="2019-01-31">
+          <input type="date" name="start">
         </label>
         <label>End date
-          <input type="date" name="end" min="2019-01-01" max="2019-01-31">
+          <input type="date" name="end">
         </label>
         <label>Hour from
           <select name="hour_from"></select>
@@ -183,7 +183,7 @@
   </main>
 
   <footer class="footer">
-    <div class="container">Data source: NYC Taxi &amp; Limousine Commission (TLC) — Yellow Taxi Trip Records, January 2019.</div>
+    <div class="container">Data source: NYC Taxi &amp; Limousine Commission (TLC) — Yellow Taxi Trip Records.</div>
   </footer>
 
   <!-- Trip detail popup -->
